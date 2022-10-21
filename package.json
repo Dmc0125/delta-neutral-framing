@@ -2,7 +2,7 @@
 	"name": "delta-neutral-farming",
 	"version": "0.0.1",
 	"main": "index.js",
-	"description": "Delta neutral farming bot utilizin SOL decentralized exchanges",
+	"description": "Delta neutral farming bot utilizing SOL decentralized exchanges",
 	"author": "dmc0125",
 	"type": "module",
 	"scripts": {
