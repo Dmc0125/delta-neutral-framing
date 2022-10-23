@@ -1,4 +1,4 @@
-import { ExternalRewardStatType, MarketConfigType } from '@solendprotocol/solend-sdk'
+import { MarketConfigType } from '@solendprotocol/solend-sdk'
 import fetch from 'node-fetch'
 
 const SOLEND_API = 'https://api.solend.fi'
@@ -25,9 +25,51 @@ export const fetchPools = async () => {
 	return filtered
 }
 
+export type APIRewardRate = {
+	beginningSlot: number
+	rewardRate: string
+	name: string
+}
+
+type APIExternalRewardsData = {
+	rewardsPerShare: string
+	totalBalance: string
+	lastSlot: number
+	side: string
+	tokenMint: string
+	reserveID: string
+	market: string
+	mint: string
+	rewardMint: string
+	rewardSymbol: string
+	rewardRates: APIRewardRate[]
+	incentivizer: string
+}
+
 export const fetchExternalRewards = async () => {
 	const data = (await (
 		await fetch(`${SOLEND_API}/liquidity-mining/external-reward-stats-v2?flat=true`)
-	).json()) as ExternalRewardStatType[]
-	console.log(data)
+	).json()) as APIExternalRewardsData[]
+	return data.filter(({ market, side }) => ALLOWED_POOLS.includes(market) && side === 'supply')
+}
+
+type APITokenPriceData = {
+	identifier: string
+	price: string | null
+}
+
+type APITokenPricesResponse = {
+	results: APITokenPriceData[],
+	next: null,
+}
+
+export const fetchTokenPrices = async (symbols: string[]) => {
+	const data = await (await fetch(`${SOLEND_API}/v1/prices/?symbols=${symbols}`)).json() as APITokenPricesResponse
+	const dataMap = new Map<string, string>()
+	data.results.forEach(({ identifier, price }) => {
+		if (price) {
+			dataMap.set(identifier, price)
+		}
+	})
+	return dataMap
 }
