@@ -6,4 +6,8 @@
 
 ```env
 RPC_ENDPOINT=Solana RPC endpoint
+
+FTX_API_KEY=
+FTX_API_SECRET=
+FTX_SUBACCOUNT=
 ```

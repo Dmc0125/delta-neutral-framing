@@ -10,6 +10,9 @@ const errorMessages = (prop: string, type: string) => ({
 
 const envSchema = z.object({
 	RPC_ENDPOINT: z.string(errorMessages('RPC_ENDPOINT', 'string (url)')).min(1),
+	FTX_API_KEY: z.string(errorMessages('FTX_API_KEY', 'string')).min(1),
+	FTX_API_SECRET: z.string(errorMessages('FTX_API_SECRET', 'string')).min(1),
+	FTX_SUBACCOUNT: z.string(errorMessages('FTX_SUBACCOUNT', 'string')).or(z.undefined()),
 })
 
 const result = envSchema.safeParse(process.env)
@@ -23,4 +26,4 @@ if (!result.success) {
 	process.exit(0)
 }
 
-export const { RPC_ENDPOINT } = result.data
+export const { RPC_ENDPOINT, FTX_API_KEY, FTX_API_SECRET, FTX_SUBACCOUNT } = result.data

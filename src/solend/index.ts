@@ -16,7 +16,13 @@ type ReserveInfo = {
 
 const createKey = (poolName: string, reserveTokenSymbol: string) => `${poolName}-${reserveTokenSymbol}`
 
-export const getSupplyApr = async () => {
+type TotalSupplyApr = {
+  symbol: string
+  pool: string
+  aprPct: number
+}
+
+export const getSolendSupplyAprs = async () => {
   const pools = await fetchPools()
 
   // Parse accounts to fetch reserves info
@@ -117,7 +123,11 @@ export const getSupplyApr = async () => {
   }
   
   // Calculate rewards APR and total APR
-  const totalSupplyApr = new Map<string, number>([...baseSupplyApr])
+  const totalSupplyApr: TotalSupplyApr[] = [...baseSupplyApr].map(([key, aprPct]) => {
+    const [pool, symbol] = key.split('-')
+    return { pool, symbol, aprPct }
+  })
+  // const totalSupplyApr = new Map<string, number>([...baseSupplyApr])
   parsedReservesData.forEach(({ parsedReserve, reserveAddress, tokenSymbol, poolName }) => {
     const currentReserveRewards = rewardsData.get(reserveAddress.toString())
     if (!currentReserveRewards) {
@@ -145,9 +155,12 @@ export const getSupplyApr = async () => {
     const totalRewardsApyPct = Number((totalRewardsApy * 100).toFixed(4))
 
     const key = createKey(poolName, tokenSymbol)
-    totalSupplyApr.set(key, totalSupplyApr.get(key)! + totalRewardsApyPct)
+    totalSupplyApr.push({
+      symbol: tokenSymbol,
+      pool: poolName,
+      aprPct: baseSupplyApr.get(key)! + totalRewardsApyPct,
+    })
   })
-  console.log(totalSupplyApr)
-}
 
-await getSupplyApr()
+  return totalSupplyApr
+}
