@@ -158,35 +158,27 @@ const subscribeToChannel = <C extends Channel>(
 	return unsub
 }
 
-export const subscribeToTicker = (symbol: string) => {
-	const highestAsk = { value: 0 }
+export const subscribeToTicker = (symbol: string, cb: (ask: number) => void) => {
 	const unsub = subscribeToChannel(
 		{
 			channel: Channel.Ticker,
 			market: `${symbol.toUpperCase()}-PERP`,
 		},
 		(msg) => {
-			highestAsk.value = msg.data.ask
+			cb(msg.data.ask)
 		},
 	)
-	return {
-		unsub,
-		highestAsk,
-	}
+	return unsub
 }
 
-export const subscribeToFills = () => {
-	const filledSize = { value: 0 }
+export const subscribeToFills = (cb: (size: number) => void) => {
 	const unsub = subscribeToChannel(
 		{
 			channel: Channel.Fills,
 		},
 		(msg) => {
-			filledSize.value += msg.data.size
+			cb(msg.data.size)
 		},
 	)
-	return {
-		unsub,
-		filledSize,
-	}
+	return unsub
 }
