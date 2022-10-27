@@ -30,7 +30,7 @@ export const calculateBorrowAPR = (reserve: Reserve) => {
 }
 
 export const calculateSupplyApr = (reserve: Reserve) => {
-  const currentUtilization = calculateUtilizationRatio(reserve)
-  const borrowAPR = calculateBorrowAPR(reserve)
-  return currentUtilization * borrowAPR * (1 - reserve.config.protocolTakeRate / 100)
+	const currentUtilization = calculateUtilizationRatio(reserve)
+	const borrowAPR = calculateBorrowAPR(reserve)
+	return currentUtilization * borrowAPR * (1 - reserve.config.protocolTakeRate / 100)
 }

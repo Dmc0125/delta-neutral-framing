@@ -27,4 +27,5 @@ if (!result.success) {
 	process.exit(0)
 }
 
-export const { RPC_ENDPOINT, FTX_API_KEY, FTX_API_SECRET, FTX_SUBACCOUNT, SOL_PRIVATE_KEY } = result.data
+export const { RPC_ENDPOINT, FTX_API_KEY, FTX_API_SECRET, FTX_SUBACCOUNT, SOL_PRIVATE_KEY } =
+	result.data

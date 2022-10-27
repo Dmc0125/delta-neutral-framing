@@ -59,12 +59,14 @@ type APITokenPriceData = {
 }
 
 type APITokenPricesResponse = {
-	results: APITokenPriceData[],
-	next: null,
+	results: APITokenPriceData[]
+	next: null
 }
 
 export const fetchTokenPrices = async (symbols: string[]) => {
-	const data = await (await fetch(`${SOLEND_API}/v1/prices/?symbols=${symbols}`)).json() as APITokenPricesResponse
+	const data = (await (
+		await fetch(`${SOLEND_API}/v1/prices/?symbols=${symbols}`)
+	).json()) as APITokenPricesResponse
 	const dataMap = new Map<string, string>()
 	data.results.forEach(({ identifier, price }) => {
 		if (price) {
