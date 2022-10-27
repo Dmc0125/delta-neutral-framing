@@ -26,12 +26,14 @@
 	},
 	"license": "MIT",
 	"dependencies": {
+		"@jup-ag/core": "3.0.0-beta.2",
 		"@solana/web3.js": "^1.66.2",
 		"@solendprotocol/solend-sdk": "^0.7.0",
 		"@zero_one/client": "0.11.2-beta0",
 		"bignumber.js": "^9.1.0",
 		"bn.js": "^5.2.1",
 		"dotenv": "^16.0.3",
+		"jsbi": "^4.3.0",
 		"node-fetch": "^3.2.10",
 		"ws": "^8.10.0",
 		"zod": "^3.19.1"

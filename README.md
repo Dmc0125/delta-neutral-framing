@@ -10,4 +10,6 @@ RPC_ENDPOINT=Solana RPC endpoint
 FTX_API_KEY=
 FTX_API_SECRET=
 FTX_SUBACCOUNT=
+
+SOL_PRIVATE_KEY=SOL wallet private key without encoding as array of integers
 ```
