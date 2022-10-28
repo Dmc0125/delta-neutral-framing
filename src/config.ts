@@ -8,16 +8,16 @@ const pk = new Uint8Array(SOL_PRIVATE_KEY.split(',').map((x) => Number(x)))
 export const solWallet = Keypair.fromSecretKey(pk)
 
 export type Token = {
-  mint: PublicKey
-  decimals: number
+	mint: PublicKey
+	decimals: number
 }
 
 export const USDC: Token = {
-  mint: new PublicKey('EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v'),
-  decimals: 6,
+	mint: new PublicKey('EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v'),
+	decimals: 6,
 }
 
 export const SOL: Token = {
-  mint: new PublicKey('So11111111111111111111111111111111111111112'),
-  decimals: 9,
+	mint: new PublicKey('So11111111111111111111111111111111111111112'),
+	decimals: 9,
 }

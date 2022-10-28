@@ -46,13 +46,15 @@ type FtxFetchParams = {
 	params?: Record<string, string>
 }
 
-type FtxApiResponse<T> = {
-	success: true
-	result: T
-} |{
-	success: false
-	error: string
-}
+type FtxApiResponse<T> =
+	| {
+			success: true
+			result: T
+	  }
+	| {
+			success: false
+			error: string
+	  }
 
 const ftxFetch = async <ReturnType>(
 	{ method, endpoint, options, params }: FtxFetchParams,
@@ -98,16 +100,18 @@ const ftxFetch = async <ReturnType>(
 	}
 }
 
+export type OrderSide = 'sell' | 'buy'
+
 type PlaceOrderParams = {
 	symbol: string
 	price: number
 	size: number
 	reduceOnly?: boolean
+	side: OrderSide
 }
 
 type OrderType = 'limit' | 'market'
 type OrderStatus = 'new' | 'open' | 'closed'
-type OrderSide = 'sell' | 'buy'
 
 type OrderResponse = {
 	createdAt: string
@@ -127,15 +131,15 @@ type OrderResponse = {
 	clientId: string | null
 }
 
-export const placeOrder = async ({ symbol, price, size }: PlaceOrderParams) => {
+export const placeOrder = async ({ symbol, price, size, side }: PlaceOrderParams) => {
 	const endpoint = '/orders'
 	const res = await ftxFetch<OrderResponse>(
 		{
 			method: 'POST',
 			options: {
 				market: `${symbol.toUpperCase()}-PERP`,
-				side: 'sell',
 				type: 'limit',
+				side,
 				price,
 				size,
 			},
@@ -154,13 +158,16 @@ type ModifyOrderParams = {
 
 export const modifyOrder = async ({ id, size, price }: ModifyOrderParams) => {
 	const endpoint = `/orders/${id}/modify`
-	const res = await ftxFetch<OrderResponse>({
-		method: 'POST',
-		endpoint,
-		options: {
-			size,
-			price,
+	const res = await ftxFetch<OrderResponse>(
+		{
+			method: 'POST',
+			endpoint,
+			options: {
+				size,
+				price,
+			},
 		},
-	}, true)
+		true,
+	)
 	return res
 }

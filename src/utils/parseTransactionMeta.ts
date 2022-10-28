@@ -4,8 +4,7 @@ import { SOL, solWallet } from '../config.js'
 
 export const findTokenAmountInfo = (tokenAmountInfos: TokenBalance[], tokenMint: PublicKey) =>
 	tokenAmountInfos.find(
-		({ owner, mint }) =>
-			owner === solWallet.publicKey.toString() && mint === tokenMint.toString(),
+		({ owner, mint }) => owner === solWallet.publicKey.toString() && mint === tokenMint.toString(),
 	)
 
 const getTokenSwapAmount = (
@@ -25,19 +24,22 @@ const getTokenSwapAmount = (
 }
 
 type ParseTxMetaParams = {
-  inputMint: PublicKey
-  outputMint: PublicKey
+	inputMint: PublicKey
+	outputMint: PublicKey
 }
 
 const TX_FEE = 5000
 
 export const parseTransactionMeta = (
-  meta: ConfirmedTransactionMeta,
-  { inputMint, outputMint }: ParseTxMetaParams,
+	meta: ConfirmedTransactionMeta,
+	{ inputMint, outputMint }: ParseTxMetaParams,
 ) => {
 	const { preTokenBalances, postTokenBalances, preBalances, postBalances } = meta
 
-	if (inputMint.toString() === SOL.mint.toString() || outputMint.toString() === SOL.mint.toString()) {
+	if (
+		inputMint.toString() === SOL.mint.toString() ||
+		outputMint.toString() === SOL.mint.toString()
+	) {
 		const solSwapAmountRaw = Math.abs(preBalances[0] - postBalances[0]) - TX_FEE
 		if (inputMint.toString() === SOL.mint.toString()) {
 			return {

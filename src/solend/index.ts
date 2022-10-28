@@ -128,7 +128,7 @@ export const getSolendSupplyAprs = async () => {
 	parsedReservesData.forEach((current) => {
 		const { parsedReserve, reserveAddress, ...currentPoolAndReserveInfo } = current
 		const currentReserveRewards = rewardsData.get(reserveAddress.toString())
-		
+
 		const { tokenSymbol, poolName } = currentPoolAndReserveInfo
 		const key = createKey(poolName, tokenSymbol)
 		const baseApr = baseSupplyApr.get(key)!
