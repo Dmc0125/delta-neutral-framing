@@ -67,15 +67,16 @@ export const executeMarketBuy = async ({
 		}
 
 		const swapRes = await executeTx(swapTx)
-		if (typeof swapRes === 'function') {
-			return swapRes()
-		}
 
 		if (cleanupTx) {
 			const cleanupRes = await executeTx(cleanupTx)
 			if (typeof cleanupRes === 'function') {
 				return cleanupRes()
 			}
+		}
+
+		if (typeof swapRes === 'function') {
+			return swapRes()
 		}
 
 		return swapRes

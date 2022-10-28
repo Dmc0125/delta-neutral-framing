@@ -12,14 +12,13 @@ type ReserveInfo = {
 	poolAddress: PublicKey
 	tokenSymbol: string
 	tokenMint: string
+	tokenDecimals: number
 }
 
 const createKey = (poolName: string, reserveTokenSymbol: string) =>
 	`${poolName}-${reserveTokenSymbol}`
 
-type TotalSupplyApr = {
-	symbol: string
-	pool: string
+type TotalSupplyApr = ReserveInfo & {
 	aprPct: number
 }
 
@@ -37,6 +36,7 @@ export const getSolendSupplyAprs = async () => {
 				poolAddress: new PublicKey(address),
 				tokenMint: res.liquidityToken.mint,
 				tokenSymbol: res.liquidityToken.symbol,
+				tokenDecimals: res.liquidityToken.decimals,
 			})
 		})
 	})
@@ -124,16 +124,23 @@ export const getSolendSupplyAprs = async () => {
 	}
 
 	// Calculate rewards APR and total APR
-	const totalSupplyApr: TotalSupplyApr[] = [...baseSupplyApr].map(([key, aprPct]) => {
-		const [pool, symbol] = key.split('-')
-		return { pool, symbol, aprPct }
-	})
-	// const totalSupplyApr = new Map<string, number>([...baseSupplyApr])
-	parsedReservesData.forEach(({ parsedReserve, reserveAddress, tokenSymbol, poolName }) => {
+	const totalSupplyApr: TotalSupplyApr[] = []
+	parsedReservesData.forEach((current) => {
+		const { parsedReserve, reserveAddress, ...currentPoolAndReserveInfo } = current
 		const currentReserveRewards = rewardsData.get(reserveAddress.toString())
+		
+		const { tokenSymbol, poolName } = currentPoolAndReserveInfo
+		const key = createKey(poolName, tokenSymbol)
+		const baseApr = baseSupplyApr.get(key)!
+
 		if (!currentReserveRewards) {
+			totalSupplyApr.push({
+				aprPct: baseApr,
+				...currentPoolAndReserveInfo,
+			})
 			return
 		}
+
 		const totalBorrowsWads = parsedReserve.liquidity.borrowedAmountWads
 		const totalLiquidityWads = parsedReserve.liquidity.availableAmount.mul(new BN(WAD))
 		const totalDepositsWads = totalBorrowsWads.add(totalLiquidityWads)
@@ -152,14 +159,13 @@ export const getSolendSupplyAprs = async () => {
 				parsedReserve.liquidity.mintDecimals,
 			)
 		})
+
 		const totalRewardsApy = apys.reduce((total, current) => total + Number(current.toString()), 0)
 		const totalRewardsApyPct = Number((totalRewardsApy * 100).toFixed(4))
 
-		const key = createKey(poolName, tokenSymbol)
 		totalSupplyApr.push({
-			symbol: tokenSymbol,
-			pool: poolName,
-			aprPct: baseSupplyApr.get(key)! + totalRewardsApyPct,
+			aprPct: baseApr + totalRewardsApyPct,
+			...currentPoolAndReserveInfo,
 		})
 	})
 

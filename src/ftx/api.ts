@@ -27,7 +27,6 @@ type AuthHeaders = Record<string, string>
 const createAuthHeaders = (method: FetchMethod, reqPath: string) => {
 	const ts = new Date().getTime() + ftxTimeDiff.value
 	const key = `${ts}${method}/api${reqPath}`
-	console.log({ key })
 	const signature = crypto.createHmac('sha256', FTX_API_SECRET).update(key).digest('hex')
 	const headers: AuthHeaders = {
 		'FTX-KEY': FTX_API_KEY,
@@ -45,6 +44,14 @@ type FtxFetchParams = {
 	endpoint: string
 	options?: Record<string, unknown>
 	params?: Record<string, string>
+}
+
+type FtxApiResponse<T> = {
+	success: true
+	result: T
+} |{
+	success: false
+	error: string
 }
 
 const ftxFetch = async <ReturnType>(
@@ -71,15 +78,23 @@ const ftxFetch = async <ReturnType>(
 				body: optionsBody,
 				method,
 			})
-		).json()) as Record<string, unknown>
+		).json()) as FtxApiResponse<ReturnType>
 		if (res.success) {
-			return res.result as ReturnType
+			return {
+				success: true,
+				data: res.result as ReturnType,
+			}
 		}
 		console.error(res)
-		return null
+		return {
+			success: false,
+			error: res.error,
+		}
 	} catch (error) {
 		console.error(error)
-		return null
+		return {
+			success: false,
+		}
 	}
 }
 
@@ -94,7 +109,7 @@ type OrderType = 'limit' | 'market'
 type OrderStatus = 'new' | 'open' | 'closed'
 type OrderSide = 'sell' | 'buy'
 
-type PlaceOrderResponse = {
+type OrderResponse = {
 	createdAt: string
 	filledSize: number
 	future: string
@@ -114,7 +129,7 @@ type PlaceOrderResponse = {
 
 export const placeOrder = async ({ symbol, price, size }: PlaceOrderParams) => {
 	const endpoint = '/orders'
-	const res = await ftxFetch<PlaceOrderResponse>(
+	const res = await ftxFetch<OrderResponse>(
 		{
 			method: 'POST',
 			options: {
@@ -128,5 +143,24 @@ export const placeOrder = async ({ symbol, price, size }: PlaceOrderParams) => {
 		},
 		true,
 	)
+	return res
+}
+
+type ModifyOrderParams = {
+	id: number
+	size: number
+	price: number
+}
+
+export const modifyOrder = async ({ id, size, price }: ModifyOrderParams) => {
+	const endpoint = `/orders/${id}/modify`
+	const res = await ftxFetch<OrderResponse>({
+		method: 'POST',
+		endpoint,
+		options: {
+			size,
+			price,
+		},
+	}, true)
 	return res
 }

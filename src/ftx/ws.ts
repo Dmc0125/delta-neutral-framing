@@ -171,13 +171,13 @@ export const subscribeToTicker = (symbol: string, cb: (ask: number) => void) => 
 	return unsub
 }
 
-export const subscribeToFills = (cb: (size: number) => void) => {
+export const subscribeToFills = (cb: (size: WsFillsMessage['data']) => void) => {
 	const unsub = subscribeToChannel(
 		{
 			channel: Channel.Fills,
 		},
 		(msg) => {
-			cb(msg.data.size)
+			cb(msg.data)
 		},
 	)
 	return unsub

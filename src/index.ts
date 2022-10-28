@@ -10,15 +10,15 @@ if (!ftxFundingAprs) {
 
 let highestDiffSymbol: null | string = null
 let highestApr: number | null = null
-solendAprs.forEach(({ symbol, aprPct }) => {
-	const ftxCurrentApr = ftxFundingAprs.get(symbol)
+solendAprs.forEach(({ tokenSymbol, aprPct }) => {
+	const ftxCurrentApr = ftxFundingAprs.get(tokenSymbol)
 	if (!ftxCurrentApr) {
 		return
 	}
 	const totalApr = ftxCurrentApr + aprPct
 	if (highestApr === null || totalApr > highestApr) {
 		highestApr = totalApr
-		highestDiffSymbol = symbol
+		highestDiffSymbol = tokenSymbol
 	}
 })
 
