@@ -1,5 +1,7 @@
 import fetch from 'node-fetch'
 
+import { getMarkets } from './api.js'
+
 const API_ENDPOINT = 'https://ftx-predicted-funding-production.up.railway.app/'
 
 type FundingApiData = Record<
@@ -13,6 +15,20 @@ type FundingApiData = Record<
 type FundingApiResponse = {
 	data: FundingApiData | null
 }
+
+const { data, error } = await getMarkets()
+if (!data) {
+	throw Error(error || '[FTX ERROR]: Could not fetch markets')
+}
+export const sizeIncrements = new Map<string, number>()
+data.forEach(({ sizeIncrement, name, underlying }) => {
+	if (name.endsWith('PERP')) {
+		sizeIncrements.set(underlying, sizeIncrement)
+	}
+})
+
+export const floorBasedOnSizeIncrement = (num: number, increment: number) => 
+	Math.floor(num / increment) * increment
 
 // Longs pay shorts if positive
 export const getFundingRates = async () => {

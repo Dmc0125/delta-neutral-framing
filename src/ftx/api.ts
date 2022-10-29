@@ -77,7 +77,7 @@ const ftxFetch = async <ReturnType>(
 					'content-type': 'application/json',
 					...authHeaders,
 				},
-				body: optionsBody,
+				body: optionsBody.length ? optionsBody : undefined,
 				method,
 			})
 		).json()) as FtxApiResponse<ReturnType>
@@ -170,5 +170,37 @@ export const modifyOrder = async ({ id, size, price }: ModifyOrderParams) => {
 		},
 		true,
 	)
+	return res
+}
+
+type MarketsResponse = {
+	name: string
+	baseCurrency: string | null
+	quoteCurrency: string | null
+	quoteVolume24h: number
+	change1h: number
+	change24h: number
+	changeBod: number
+	highLeverageFeeExempt: boolean
+	minProvideSize: number
+	type: 'future' | 'spot'
+	underlying: string
+	enabled: boolean
+	ask: number
+	bid: number
+	last: number
+	postOnly: boolean
+	price: number
+	priceIncrement: number
+	sizeIncrement: number
+	restricted: boolean
+	volumeUsd24h: number
+	largeOrderThreshold: number
+	isEtfMarket: boolean
+}
+
+export const getMarkets = async () => {
+	const endpoint = '/markets'
+	const res = await ftxFetch<MarketsResponse[]>({ endpoint, method: 'GET' })
 	return res
 }

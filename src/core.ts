@@ -4,6 +4,7 @@ import { executeMarketBuy } from './jupiter/index.js'
 import { modifyOrder, placeOrder } from './ftx/api.js'
 import { subscribeToFills, subscribeToTicker } from './ftx/ws.js'
 import { Token, USDC } from './config.js'
+import { floorBasedOnSizeIncrement } from './ftx/index.js'
 
 const toRaw = (ui: number, decimals: number) => Math.floor(ui * 10 ** decimals)
 const floor = (num: number, decimals: number) => Math.floor(num * 10 ** decimals) / 10 ** decimals
@@ -50,18 +51,19 @@ const useHedge = (input: Token, output: Token, totalSizeUi: number) => {
 
 const castBaseSizeToQuoteSize = (baseSize: number, basePrice: number, decimals: number) =>
 	floor(baseSize * basePrice, decimals)
-// TODO: USE FTX MARKET DECIMALS
-const castQuoteSizeToBaseSize = (quoteSize: number, basePrice: number) =>
-	floor(quoteSize / basePrice, 3)
+const castQuoteSizeToBaseSize = (quoteSize: number, basePrice: number, sizeIncrement: number) =>
+	floorBasedOnSizeIncrement(quoteSize / basePrice, sizeIncrement)
 
 type HedgedPositionParams = {
 	ftxPerpSymbol: string
+	ftxSizeIncrement: number
 	symbolToken: Token
 	usdcSize: number
 }
 
 export const openHedgedPosition = async ({
 	ftxPerpSymbol,
+	ftxSizeIncrement,
 	symbolToken,
 	usdcSize,
 }: HedgedPositionParams) => {
@@ -89,7 +91,7 @@ export const openHedgedPosition = async ({
 	const { data: firstOrder } = await placeOrder({
 		symbol: ftxPerpSymbol,
 		price: ask,
-		size: castQuoteSizeToBaseSize(usdcSize, ask),
+		size: castQuoteSizeToBaseSize(usdcSize, ask, ftxSizeIncrement),
 		side: 'sell',
 	})
 	if (!firstOrder) {
@@ -110,7 +112,7 @@ export const openHedgedPosition = async ({
 			console.log('Modifying order at:', ask)
 			const { data: modifiedOrder, error } = await modifyOrder({
 				id: orderId,
-				size: castQuoteSizeToBaseSize(remainingSize, ask),
+				size: castQuoteSizeToBaseSize(remainingSize, ask, ftxSizeIncrement),
 				price: ask,
 			})
 			if (error === 'Size too small for provide') {
@@ -138,13 +140,13 @@ export const openHedgedPosition = async ({
 type CloseHedgedPositionParams = {
 	ftxPerpSymbol: string
 	symbolToken: Token
-	symbolSizeUi: number
+	openedPositionSize: number
 }
 
 export const closeHedgedPosition = async ({
 	ftxPerpSymbol,
 	symbolToken,
-	symbolSizeUi,
+	openedPositionSize,
 }: CloseHedgedPositionParams) => {
 	console.log('Subscribing to websocket feeds')
 	let bid = 0
@@ -152,7 +154,7 @@ export const closeHedgedPosition = async ({
 		bid = _bid
 	})
 
-	let remainingSymbolSize = symbolSizeUi
+	let remainingSymbolSize = openedPositionSize
 	let orderId: number | null = null
 
 	const addToHedge = useHedge(symbolToken, USDC, remainingSymbolSize)
