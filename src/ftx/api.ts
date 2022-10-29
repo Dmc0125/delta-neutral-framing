@@ -131,7 +131,7 @@ type OrderResponse = {
 	clientId: string | null
 }
 
-export const placeOrder = async ({ symbol, price, size, side }: PlaceOrderParams) => {
+export const placeOrder = async ({ symbol, price, size, side, reduceOnly }: PlaceOrderParams) => {
 	const endpoint = '/orders'
 	const res = await ftxFetch<OrderResponse>(
 		{
@@ -139,6 +139,7 @@ export const placeOrder = async ({ symbol, price, size, side }: PlaceOrderParams
 			options: {
 				market: `${symbol.toUpperCase()}-PERP`,
 				type: 'limit',
+				reduceOnly,
 				side,
 				price,
 				size,

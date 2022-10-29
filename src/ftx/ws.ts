@@ -158,14 +158,20 @@ const subscribeToChannel = <C extends Channel>(
 	return unsub
 }
 
-export const subscribeToTicker = (symbol: string, cb: (ask: number) => void) => {
+export const subscribeToTicker = (
+	symbol: string,
+	cb: (payload: { ask: number; bid: number }) => void,
+) => {
 	const unsub = subscribeToChannel(
 		{
 			channel: Channel.Ticker,
 			market: `${symbol.toUpperCase()}-PERP`,
 		},
 		(msg) => {
-			cb(msg.data.ask)
+			cb({
+				bid: msg.data.bid,
+				ask: msg.data.ask,
+			})
 		},
 	)
 	return unsub

@@ -1,9 +1,9 @@
 import { setTimeout } from 'node:timers/promises'
 
 import { executeMarketBuy } from './jupiter/index.js'
-import { modifyOrder, OrderSide, placeOrder } from './ftx/api.js'
+import { modifyOrder, placeOrder } from './ftx/api.js'
 import { subscribeToFills, subscribeToTicker } from './ftx/ws.js'
-import { SOL, Token, USDC } from './config.js'
+import { Token, USDC } from './config.js'
 
 const toRaw = (ui: number, decimals: number) => Math.floor(ui * 10 ** decimals)
 const floor = (num: number, decimals: number) => Math.floor(num * 10 ** decimals) / 10 ** decimals
@@ -17,12 +17,12 @@ const useHedge = (input: Token, output: Token, totalSizeUi: number) => {
 	const intervalId = setInterval(async () => {
 		// 99.5% of totalSizeRaw because of FTX rounding
 		if (!executing.length && executedRaw >= totalSizeRaw * 0.995) {
-			console.log('Position successfully hedged')
+			console.log('Counter position successfully opened/closed')
 			clearInterval(intervalId)
 			return
 		}
 		if (toExecuteRaw > 0) {
-			console.log('Opening hedge position of size:', toExecuteRaw)
+			console.log('Opening/Closing counter position of size:', toExecuteRaw)
 			executing.push(true)
 			const _toExecuteRaw = toExecuteRaw
 			toExecuteRaw = 0
@@ -55,26 +55,27 @@ const castQuoteSizeToBaseSize = (quoteSize: number, basePrice: number) =>
 	floor(quoteSize / basePrice, 3)
 
 type HedgedPositionParams = {
-	ftxSymbol: string
-	outputToken: Token
-	quoteSize: number
+	ftxPerpSymbol: string
+	symbolToken: Token
+	usdcSize: number
 }
 
 export const openHedgedPosition = async ({
-	ftxSymbol,
-	outputToken,
-	quoteSize,
+	ftxPerpSymbol,
+	symbolToken,
+	usdcSize,
 }: HedgedPositionParams) => {
 	console.log('Subscribing to websocket feeds')
-	const addToHedge = useHedge(USDC, outputToken, quoteSize)
+
+	const addToHedge = useHedge(USDC, symbolToken, usdcSize)
 	let orderId: null | number = null
 
 	let ask = 0
-	const tickerUnsub = subscribeToTicker(ftxSymbol, async (_ask) => {
+	const tickerUnsub = subscribeToTicker(ftxPerpSymbol, async ({ ask: _ask }) => {
 		ask = _ask
 	})
 
-	let remainingSize = quoteSize
+	let remainingSize = usdcSize
 	const fillsUnsub = subscribeToFills(({ size, orderId: fillOrderId, price }) => {
 		if (orderId === fillOrderId) {
 			const quoteSize = castBaseSizeToQuoteSize(size, price, USDC.decimals)
@@ -86,9 +87,9 @@ export const openHedgedPosition = async ({
 	await setTimeout(5000)
 	console.log('Placing first order at:', ask)
 	const { data: firstOrder } = await placeOrder({
-		symbol: ftxSymbol,
+		symbol: ftxPerpSymbol,
 		price: ask,
-		size: castQuoteSizeToBaseSize(quoteSize, ask),
+		size: castQuoteSizeToBaseSize(usdcSize, ask),
 		side: 'sell',
 	})
 	if (!firstOrder) {
@@ -132,4 +133,82 @@ export const openHedgedPosition = async ({
 	fillsUnsub()
 
 	console.log('Successfully opened hedged position')
+}
+
+type CloseHedgedPositionParams = {
+	ftxPerpSymbol: string
+	symbolToken: Token
+	symbolSizeUi: number
+}
+
+export const closeHedgedPosition = async ({
+	ftxPerpSymbol,
+	symbolToken,
+	symbolSizeUi,
+}: CloseHedgedPositionParams) => {
+	console.log('Subscribing to websocket feeds')
+	let bid = 0
+	const unsubTicker = subscribeToTicker(ftxPerpSymbol, ({ bid: _bid }) => {
+		bid = _bid
+	})
+
+	let remainingSymbolSize = symbolSizeUi
+	let orderId: number | null = null
+
+	const addToHedge = useHedge(symbolToken, USDC, remainingSymbolSize)
+	const unsubFills = subscribeToFills(({ size: tokenSize, orderId: _orderId }) => {
+		if (_orderId === orderId) {
+			addToHedge(tokenSize)
+			remainingSymbolSize -= tokenSize
+		}
+	})
+
+	await setTimeout(5000)
+
+	console.log('Placing first order')
+	const { data: firstOrder } = await placeOrder({
+		symbol: ftxPerpSymbol,
+		price: bid,
+		size: remainingSymbolSize,
+		side: 'buy',
+		reduceOnly: true,
+	})
+
+	if (!firstOrder) {
+		unsubTicker()
+		unsubFills()
+		return
+	}
+
+	orderId = firstOrder.id
+	let lastOrderPrice = firstOrder.price
+
+	const trailOrder = async () => {
+		if (remainingSymbolSize === 0) {
+			return
+		}
+		if (lastOrderPrice !== bid && orderId) {
+			console.log('Modifying order at:', bid)
+			const { data: modifiedOrder, error } = await modifyOrder({
+				id: orderId,
+				size: remainingSymbolSize,
+				price: bid,
+			})
+			if (error === 'Size too small for provide') {
+				console.log(error)
+				return
+			}
+			if (modifiedOrder) {
+				orderId = modifiedOrder.id
+				lastOrderPrice = modifiedOrder.price
+			}
+		}
+		await setTimeout(500)
+		trailOrder()
+	}
+
+	await trailOrder()
+
+	unsubTicker()
+	unsubFills()
 }
