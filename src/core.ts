@@ -77,9 +77,11 @@ export const openHedgedPosition = async ({
 		ask = _ask
 	})
 
+	let tokenSize = 0
 	let remainingSize = usdcSize
 	const fillsUnsub = subscribeToFills(({ size, orderId: fillOrderId, price }) => {
 		if (orderId === fillOrderId) {
+			tokenSize += size
 			const quoteSize = castBaseSizeToQuoteSize(size, price, USDC.decimals)
 			remainingSize -= quoteSize
 			addToHedge(quoteSize)
@@ -134,7 +136,8 @@ export const openHedgedPosition = async ({
 	tickerUnsub()
 	fillsUnsub()
 
-	console.log('Successfully opened hedged position')
+	console.log('Successfully opened hedged position of size:', tokenSize)
+	return tokenSize
 }
 
 type CloseHedgedPositionParams = {
