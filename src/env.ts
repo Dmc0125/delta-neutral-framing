@@ -14,6 +14,8 @@ const envSchema = z.object({
 	FTX_API_SECRET: z.string(errorMessages('FTX_API_SECRET', 'string')).min(1),
 	FTX_SUBACCOUNT: z.string(errorMessages('FTX_SUBACCOUNT', 'string')).or(z.undefined()),
 	SOL_PRIVATE_KEY: z.string(errorMessages('SOL_PRIVATE_KEY', 'string')).min(1),
+	REDIS_URL: z.string(errorMessages('REDIS_URL', 'string (url)')).min(1),
+	REDIS_TOKEN: z.string(errorMessages('REDIS_TOKEN', 'string')).min(1),
 })
 
 const result = envSchema.safeParse(process.env)
@@ -27,5 +29,5 @@ if (!result.success) {
 	process.exit(0)
 }
 
-export const { RPC_ENDPOINT, FTX_API_KEY, FTX_API_SECRET, FTX_SUBACCOUNT, SOL_PRIVATE_KEY } =
+export const { RPC_ENDPOINT, FTX_API_KEY, FTX_API_SECRET, FTX_SUBACCOUNT, SOL_PRIVATE_KEY, REDIS_TOKEN, REDIS_URL } =
 	result.data
