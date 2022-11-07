@@ -15,7 +15,8 @@ const getHighestApr = async () => {
 	let highestFtxSymbol: null | string = null
 	let highestApr: number | null = null
 	let highestToken: Token | null = null
-	solendAprs.forEach(({ tokenSymbol, aprPct, tokenDecimals, tokenMint }) => {
+	let highestPoolAddress: PublicKey | null = null
+	solendAprs.forEach(({ tokenSymbol, aprPct, tokenDecimals, tokenMint, poolAddress }) => {
 		const ftxCurrentApr = ftxFundingAprs.get(tokenSymbol)
 		if (!ftxCurrentApr) {
 			return
@@ -28,6 +29,7 @@ const getHighestApr = async () => {
 				mint: new PublicKey(tokenMint),
 				decimals: tokenDecimals,
 			}
+			highestPoolAddress = poolAddress
 		}
 	})
 
@@ -38,5 +40,10 @@ const getHighestApr = async () => {
 		token: highestToken!,
 		sizeIncrement: sizeIncrements.get(highestFtxSymbol!)!,
 		highestApr: highestApr || 0,
+		highestPoolAddress: highestPoolAddress!,
 	}
 }
+
+const highestApr = await getHighestApr()
+
+console.log(highestApr.ftxSymbol, highestApr.token, highestApr.highestPoolAddress.toString())
