@@ -4,6 +4,7 @@ import JSBI from 'jsbi'
 import { setTimeout } from 'node:timers/promises'
 
 import { connection, solWallet } from '../config.js'
+import { logMessage } from '../utils/logger.js'
 import { sendAndConfirmTransaction, TransactionResponse } from '../utils/solTransaction.js'
 
 const jupiter = await Jupiter.load({
@@ -58,30 +59,36 @@ export const executeMarketBuy = async ({
 			swapTransaction: swapTx,
 			cleanupTransaction: cleanupTx,
 		} = transactions
-		console.log('Starting transactions')
+
 		if (setupTx) {
+			logMessage({ module: 'jupiter', type: 'error' }, 'Executing setupTx')
 			const setupRes = await executeTx(setupTx)
 			if (typeof setupRes === 'function') {
+				logMessage({ module: 'jupiter' }, 'SetupTx failed')
 				return setupRes()
 			}
 		}
 
+		logMessage({ module: 'jupiter' }, 'Executing swapTx')
 		const swapRes = await executeTx(swapTx)
 
 		if (cleanupTx) {
+			logMessage({ module: 'jupiter' }, 'Executing cleanupTx')
 			const cleanupRes = await executeTx(cleanupTx)
 			if (typeof cleanupRes === 'function') {
+				logMessage({ module: 'jupiter' }, 'CleanupTx failed')
 				return cleanupRes()
 			}
 		}
 
 		if (typeof swapRes === 'function') {
+			logMessage({ module: 'jupiter' }, 'SwapTx failed')
 			return swapRes()
 		}
 
 		return swapRes
 	} catch (error) {
-		console.error(error)
+		logMessage({ module: 'jupiter', type: 'error' }, error as string)
 		return null
 	}
 }

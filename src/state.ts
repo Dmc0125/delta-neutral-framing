@@ -28,13 +28,13 @@ export const currentPosition = (() => {
   }
 })()
 
-export const setPosition = ({
+export const setPosition = async ({
   symbol,
   poolAddress,
   amountRaw,
   symbolToken,
 }: Position) => {
-  redis.set('currentPosition', JSON.stringify({
+  await redis.set('currentPosition', JSON.stringify({
     symbol,
     poolAddress,
     amountRaw,

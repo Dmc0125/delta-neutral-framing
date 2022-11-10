@@ -15,38 +15,47 @@ const useHedge = (input: Token, output: Token, totalSizeUi: number) => {
 	let toExecuteRaw = 0
 	const executing: boolean[] = []
 
-	const intervalId = setInterval(async () => {
-		// 99.5% of totalSizeRaw because of FTX rounding
-		if (!executing.length && executedRaw >= totalSizeRaw * 0.995) {
-			console.log('Counter position successfully opened/closed')
-			clearInterval(intervalId)
-			return
-		}
-		if (toExecuteRaw > 0) {
-			console.log('Opening/Closing counter position of size:', toExecuteRaw)
-			executing.push(true)
-			const _toExecuteRaw = toExecuteRaw
-			toExecuteRaw = 0
-			const txMetaPromise = executeMarketBuy({
-				inputMint: input.mint,
-				outputMint: output.mint,
-				sizeRaw: _toExecuteRaw,
-			})
-			const txMeta = await txMetaPromise
-			if (txMeta) {
-				executedRaw += _toExecuteRaw
-			} else {
-				toExecuteRaw += _toExecuteRaw
+	const amountRaw: Promise<number> = new Promise((resolve) => {
+		const intervalId = setInterval(async () => {
+			// 99.5% of totalSizeRaw because of FTX rounding
+			if (!executing.length && executedRaw >= totalSizeRaw * 0.995) {
+				console.log('Counter position successfully opened/closed')
+				clearInterval(intervalId)
+				resolve(executedRaw)
+				return
 			}
-			executing.pop()
-		}
-	}, 5000)
+
+			if (toExecuteRaw > 0) {
+				console.log('Opening/Closing counter position of size:', toExecuteRaw)
+				executing.push(true)
+
+				const _toExecuteRaw = toExecuteRaw
+				toExecuteRaw = 0
+
+				const txMeta = await executeMarketBuy({
+					inputMint: input.mint,
+					outputMint: output.mint,
+					sizeRaw: _toExecuteRaw,
+				})
+
+				if (txMeta) {
+					executedRaw += _toExecuteRaw
+				} else {
+					toExecuteRaw += _toExecuteRaw
+				}
+				executing.pop()
+			}
+		}, 5000)
+	})
 
 	const add = (sizeUi: number) => {
 		toExecuteRaw += toRaw(sizeUi, input.decimals)
 	}
 
-	return add
+	return {
+		add,
+		amountRaw,
+	}
 }
 
 const castBaseSizeToQuoteSize = (baseSize: number, basePrice: number, decimals: number) =>
@@ -67,9 +76,10 @@ export const openHedgedPosition = async ({
 	symbolToken,
 	usdcSize,
 }: HedgedPositionParams) => {
+	console.log(`Opening hedged position for: ${ftxPerpSymbol}`)
 	console.log('Subscribing to websocket feeds')
 
-	const addToHedge = useHedge(USDC, symbolToken, usdcSize)
+	const { add: addToHedge, amountRaw: jupiterAmountRaw } = useHedge(USDC, symbolToken, usdcSize)
 	let orderId: null | number = null
 
 	let ask = 0
@@ -77,18 +87,21 @@ export const openHedgedPosition = async ({
 		ask = _ask
 	})
 
-	let tokenSize = 0
+	let ftxTokenSize = 0
 	let remainingSize = usdcSize
 	const fillsUnsub = subscribeToFills(({ size, orderId: fillOrderId, price }) => {
 		if (orderId === fillOrderId) {
-			tokenSize += size
+			ftxTokenSize += size
 			const quoteSize = castBaseSizeToQuoteSize(size, price, USDC.decimals)
 			remainingSize -= quoteSize
 			addToHedge(quoteSize)
 		}
 	})
 
-	await setTimeout(5000)
+	while (ask === 0) {
+		await setTimeout(500)
+	}
+
 	console.log('Placing first order at:', ask)
 	const { data: firstOrder } = await placeOrder({
 		symbol: ftxPerpSymbol,
@@ -136,8 +149,8 @@ export const openHedgedPosition = async ({
 	tickerUnsub()
 	fillsUnsub()
 
-	console.log('Successfully opened hedged position of size:', tokenSize)
-	return tokenSize
+	console.log('Successfully opened hedged position of size:', ftxTokenSize)
+	return { ftxTokenSize, jupiterAmountRaw: await jupiterAmountRaw }
 }
 
 type CloseHedgedPositionParams = {
@@ -160,7 +173,7 @@ export const closeHedgedPosition = async ({
 	let remainingSymbolSize = openedPositionSize
 	let orderId: number | null = null
 
-	const addToHedge = useHedge(symbolToken, USDC, remainingSymbolSize)
+	const { add: addToHedge, amountRaw: hedgePromise } = useHedge(symbolToken, USDC, remainingSymbolSize)
 	const unsubFills = subscribeToFills(({ size: tokenSize, orderId: _orderId }) => {
 		if (_orderId === orderId) {
 			addToHedge(tokenSize)
@@ -213,6 +226,7 @@ export const closeHedgedPosition = async ({
 	}
 
 	await trailOrder()
+	await hedgePromise
 
 	unsubTicker()
 	unsubFills()

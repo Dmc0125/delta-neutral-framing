@@ -5,6 +5,10 @@ import { FTX_API_KEY, FTX_API_SECRET, FTX_SUBACCOUNT } from '../env.js'
 
 const ws = new WebSocket('wss://ftx.com/ws/')
 
+export const disconnectWebsocket = () => {
+	ws.close()
+}
+
 enum Channel {
 	Ticker = 'ticker',
 	Fills = 'fills',
